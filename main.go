@@ -3,46 +3,50 @@ package main
 import (
 	"fmt"
 	"sync"
-	//"time"
 )
 
-type result struct {
-	a int
-	b int
+type outcome struct {
+	app  string
+	code int
+	msg  string
 }
 
-func (r result) allValid() bool {
-	ok := r.a == 0 && r.b == 0
+type overallResult struct {
+	a outcome
+	b outcome
+}
+
+func (r overallResult) allValid() bool {
+	ok := r.a.code == 0 && r.b.code == 0
 	return ok
 }
 
-//var wg sync.WaitGroup
-
 func main() {
-	var res = new(result)
+	var res = new(overallResult)
 	var wg sync.WaitGroup
 	wg.Add(2)
-	result1 := make(chan int)
-	result2 := make(chan int)
-	go checkIban(&wg, result1)
-	go checkAccount(&wg, result2)
-	res.a = <-result1
-	res.b = <-result2
+	result := make(chan outcome)
+	go checkIban(&wg, result)
+	go checkAccount(&wg, result)
+	res.a, res.b = <-result, <-result
 	wg.Wait()
+	close(result)
 	fmt.Println(res)
-	fmt.Println("Is valid ", res.allValid())
+	fmt.Println("Is valid", res.allValid())
 	fmt.Println("Both goroutines returned values")
 }
 
-func checkIban(wg *sync.WaitGroup, result chan int) {
+func checkIban(wg *sync.WaitGroup, result chan outcome) {
 	defer wg.Done()
-	//time.Sleep(10 * time.Second)
-	result <- 0
+	returnValue := outcome{app: "a", code: 0}
+	result <- returnValue
 	fmt.Println("checkIban completed")
 }
 
-func checkAccount(wg *sync.WaitGroup, result chan int) {
+func checkAccount(wg *sync.WaitGroup, result chan outcome) {
 	defer wg.Done()
-	result <- 0
+	//returnValue := outcome{app: "b", code: 0}
+	returnValue := outcome{app: "b", code: 1, msg: "Conto inesistente"}
+	result <- returnValue
 	fmt.Println("checkAccount completed")
 }
